@@ -1,0 +1,26 @@
+# Environnements Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Secrets / config locale
+.env
+
+# macOS
+.DS_Store
+
+# Logs / caches
+logs/
+*.log
+.cache/
+
+# Données locales (à ajuster si besoin)
+*.db
+*.sqlite
+*.sqlite3
+
+# Front/build (si applicable)
+node_modules/
+dist/
+build/

@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="fr" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>Analyste PDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    crossorigin="anonymous"
+  >
+
+  <style>
+    /* PALETTE PAR DÉFAUT : MODE CLAIR */
+    :root {
+      --bg: radial-gradient(1100px 600px at 20% -5%, #e5edf8 0%, #f4f7fb 50%, #f8fafc 90%);
+      --surface: rgba(255,255,255,0.9);
+      --elevated: #ffffff;
+      --border: rgba(15,23,42,0.08);
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #2563eb;
+      --accent-soft: rgba(37,99,235,0.08);
+    }
+
+    /* MODE SOMBRE SI LE SYSTÈME EST EN SOMBRE */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: radial-gradient(1100px 600px at 20% -5%, #14253b 0%, #0b1015 50%, #020617 90%);
+        --surface: rgba(5,8,12,0.55);
+        --elevated: rgba(7,10,15,0.9);
+        --border: rgba(255,255,255,0.06);
+        --muted: rgba(148,163,184,0.8);
+        --text: #e2e8f0;
+        --accent: #3b82f6;
+        --accent-soft: rgba(59,130,246,0.12);
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app-shell {
+      max-width: none;      /* supprime la limite 1320px */
+      width: 100%;
+      margin: 0;            /* supprime le padding extérieur */
+      padding: 0.5rem;     /* réduit légèrement la marge interne */
+    }
+
+    .glass-card {
+      position: relative;  /* permet au logo en absolute d'être positionné par rapport à la carte */
+      min-height: 100vh;    /* occupe la hauteur totale */
+      border-radius: 0;     /* optionnel: look plein écran */
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      position: relative;
+      z-index: 2; /* au-dessus du chat pour capter les clics */
+    }
+
+    .badge-model {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: .25rem .7rem;
+      font-size: .75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+    }
+
+    .badge-model span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 2px rgba(34,197,94,0.35);
+    }
+
+    .dropzone {
+      border-radius: 1rem;
+      border: 1px dashed rgba(148,163,184,0.8);
+      padding: 1rem;
+      cursor: pointer;
+      background: rgba(248,250,252,0.9);
+      transition: border-color .2s ease, background-color .2s ease, transform .06s ease;
+    }
+
+    [data-bs-theme="dark"] .dropzone {
+      background: rgba(15,23,42,0.7);
+    }
+
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: rgba(226,232,240,0.9);
+      transform: translateY(-1px);
+    }
+
+    [data-bs-theme="dark"] .dropzone:hover {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .dropzone.dragover {
+      border-style: solid;
+      border-color: var(--accent);
+      background: rgba(37,99,235,0.08);
+    }
+
+    .pdf-pill {
+      background: rgba(248,250,252,0.95);
+      border-radius: 0.9rem;
+      border: 1px solid var(--border);
+      padding: .5rem .8rem;
+      font-size: .85rem;
+    }
+
+    [data-bs-theme="dark"] .pdf-pill {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .pdf-pill small {
+      color: var(--muted);
+    }
+
+    .pdf-pill .btn-sm {
+      font-size: .75rem;
+    }
+
+    .chat-wrapper {
+      position: relative;
+      z-index: 1;
+      height: calc(100vh - 3rem); /* ajuste si tu gardes un padding */
+      min-height: 0;              /* important: permet au flex de réduire */
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: .25rem;
+    }
+
+    .message-row {
+      display: flex;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 20%, #38bdf8, #1d4ed8 55%, #020617 100%);
+      flex-shrink: 0;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.30);
+      color: white;
+    }
+
+    .avatar-user {
+      background: radial-gradient(circle at 30% 20%, #22c55e, #15803d 55%, #020617 100%);
+    }
+
+    /* Avatar "atelier" quand le LLM travaille */
+    .llm-working {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.98); /* fond très sombre pour bien détacher les éléments */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.6);
+    }
+
+    /* Enclume (base claire / métal) */
+    .anvil {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      right: 4px;
+      height: 8px;
+      background: #e5e7eb;         /* gris clair → super visible sur fond sombre */
+      border-radius: 3px 3px 2px 2px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+
+    /* Marteau (orange pour contraster avec le bleu) */
+    .hammer {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      width: 18px;
+      height: 5px;
+      background: #f97316;         /* orange vif */
+      border-radius: 3px;
+      transform-origin: left bottom;
+      animation: hammerHit 0.6s infinite ease-in-out;
+    }
+
+    /* Petite poignée du marteau */
+    .hammer::after {
+      content: "";
+      position: absolute;
+      right: -5px;
+      bottom: -4px;
+      width: 4px;
+      height: 10px;
+      border-radius: 2px;
+      background: #f97316;
+    }
+
+    /* Étincelle dorée */
+    .spark {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      background: #facc15;         /* jaune doré */
+      border-radius: 50%;
+      bottom: 6px;
+      right: 5px;
+      opacity: 0;
+      transform: scale(0.4);
+      box-shadow: 0 0 6px rgba(250,204,21,0.9);
+      animation: sparkFlash 0.6s infinite ease-out;
+    }
+
+    /* Animation du marteau */
+    @keyframes hammerHit {
+      0%   { transform: rotate(-25deg); }
+      40%  { transform: rotate(15deg); }
+      60%  { transform: rotate(-10deg); }
+      100% { transform: rotate(-25deg); }
+    }
+
+    /* Animation de l’étincelle */
+    @keyframes sparkFlash {
+      0%, 70% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      80% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+
+    .message-bubble {
+      border-radius: 1rem;
+      padding: .55rem .8rem;
+      max-width: 100%;
+      font-size: .9rem;
+      background: rgba(248,250,252,0.95);
+      border: 1px solid rgba(148,163,184,0.35);
+      white-space: pre-wrap;
+    }
+
+    [data-bs-theme="dark"] .message-bubble {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .message-user .message-bubble {
+      background: linear-gradient(130deg, #e5eefc, #ffffff);
+      border-color: rgba(148,163,184,0.6);
+    }
+
+    [data-bs-theme="dark"] .message-user .message-bubble {
+      background: linear-gradient(130deg, #1d293b, #111827);
+    }
+
+    .message-meta {
+      font-size: .7rem;
+      color: var(--muted);
+      margin-bottom: .15rem;
+    }
+
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(100,116,139,0.8);
+      animation: typingBlink 1s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: .2s;
+    }
+    .typing-dot:nth-child(3) {
+      animation-delay: .4s;
+    }
+
+    @keyframes typingBlink {
+      0%, 20% { opacity: 0.2; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-2px); }
+      100% { opacity: .2; transform: translateY(0); }
+    }
+
+    .avatar-typing {
+      position: relative;
+    }
+
+    .avatar-typing .spinner-border {
+      width: 16px;
+      height: 16px;
+      position: absolute;
+      inset: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .input-panel {
+      border-top: 1px solid var(--border);
+      padding-top: .65rem;
+      margin-top: .5rem;
+    }
+
+    .prompt-input {
+      background: rgba(248,250,252,0.95);
+      border-radius: 1rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: var(--text);
+      resize: none;
+      min-height: 48px;
+      max-height: 120px;
+      padding: .6rem .85rem;
+    }
+
+    [data-bs-theme="dark"] .prompt-input {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .prompt-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(59,130,246,0.4);
+      outline: none;
+    }
+
+    /* Petit feedback au focus */
+    .prompt-input:focus::placeholder {
+      opacity: 0.4;
+    }
+
+    .app-logo-corner{
+      position: absolute;
+      left: 6px;           /* décale légèrement vers l'extérieur pour ne pas chevaucher le titre */
+      top: 12px;           /* logo en haut à gauche */
+      width: 38px;         /* un peu plus petit pour éviter le chevauchement */
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(10px);
+      z-index: 9999;
+    }
+
+    [data-bs-theme="dark"] .app-logo-corner{
+      background: rgba(2,6,23,0.55);
+    }
+
+    /* Avatar + spinner */
+    .avatar-logo-wrap{
+      position: relative;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: rgba(255,255,255,0.6);
+    }
+
+    [data-bs-theme="dark"] .avatar-logo-wrap{
+      background: rgba(2,6,23,0.5);
+    }
+
+    .avatar-logo-wrap img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Spinner autour (sur le ring, PAS sur le wrap) */
+    .avatar-logo-ring{
+      position: relative;
+      width: 42px !important;
+      height: 42px !important;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 42px;
+      overflow: visible;
+    }
+
+    .avatar-logo-ring.working::after{
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border-radius: 999px;
+      border: 3px solid rgba(100,116,139,0.25);
+      border-top-color: rgba(59,130,246,0.95);
+      animation: ringSpin 0.9s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes ringSpin{
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell px-2 px-md-3">
+  <div class="glass-card p-3 p-md-4">
+    <div class="row g-3 g-lg-4">
+
+      <!-- Colonne PDF / paramètres -->
+      <div class="col-12 col-lg-3 sidebar pb-3 pb-lg-0">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <div class="logo-title mb-1">Analyste <span>PDF</span></div>
+            <div class="fw-semibold">Analyse intelligente de vos documents</div>
+          </div>
+          <div class="text-end">
+            <div class="badge-model">
+              <span class="dot"></span>
+              <span>Mistral🇫🇷</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">Documents PDF</label>
+
+          <!-- Zone d’upload / drop -->
+          <div id="dropzone" class="dropzone d-flex align-items-center gap-2 mb-2">
+            <div class="flex-shrink-0">
+              <span class="badge rounded-pill text-bg-secondary">
+                <i class="bi bi-cloud-arrow-up"></i> PDF
+              </span>
+            </div>
+            <div class="flex-grow-1 small">
+              Glisser-déposer un ou plusieurs PDF ici<br>
+              <span class="text-secondary">
+                ou cliquer pour parcourir les fichiers
+              </span>
+            </div>
+            <input
+              id="fileInput"
+              type="file"
+              accept="application/pdf"
+              multiple
+              class="d-none"
+            >
+          </div>
+
+          <!-- Liste des PDF -->
+          <div id="pdfList" class="d-flex flex-column gap-2"></div>
+        </div>
+
+        <hr class="border-secondary-subtle my-3">
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">Options</label>
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            <label class="pill-setting d-inline-flex align-items-center gap-1">
+              <input type="checkbox" id="ckUseAllPdfs" class="form-check-input me-1" checked>
+              Utiliser tous les documents
+            </label>
+            <label class="pill-setting d-inline-flex align-items-center gap-1">
+              <input type="checkbox" id="ckReturnSources" class="form-check-input me-1" checked>
+              Afficher les références
+            </label>
+          </div>
+          <div class="small-help">
+            Les documents chargés servent de base pour les réponses de l’assistant.
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 flex-wrap">
+          <!-- Résumé + dropdown -->
+          <div class="btn-group">
+            <button id="btnSummary" class="btn btn-sm btn-outline-success rounded-pill">
+              Résumé
+            </button>
+            <button class="btn btn-sm btn-outline-success dropdown-toggle dropdown-toggle-split rounded-pill"
+                    data-bs-toggle="dropdown" aria-expanded="false"></button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" data-summary="executif">🧾 Résumé exécutif</a></li>
+              <li><a class="dropdown-item" href="#" data-summary="detaille">📚 Résumé détaillé</a></li>
+              <li><a class="dropdown-item" href="#" data-summary="plan">🗂️ Plan du document</a></li>
+            </ul>
+          </div>
+
+          <!-- Menu "Plus" -->
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary rounded-pill"
+                    data-bs-toggle="dropdown" aria-expanded="false"
+                    title="Plus d'actions">
+              ⋯
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" id="btnHelpMenu">Aide 💡</button></li>
+              <li><button class="dropdown-item" id="btnExportMenu">Exporter ⬆️</button></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item text-danger" id="btnNewChatMenu">Nouvelle conversation 💬</button></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colonne Chat -->
+      <div class="col-12 col-lg-9">
+        <div class="chat-wrapper">
+          <div id="chatMessages" class="chat-messages scrollbar-thin pe-1">
+            <!-- Messages générés en JS -->
+          </div>
+
+          <div class="input-panel">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <div class="small-help">
+                Posez une question, demandez un résumé ou une extraction d’informations.
+              </div>
+            </div>
+            <div class="d-flex align-items-end">
+              <textarea
+                id="promptInput"
+                class="form-control prompt-input"
+                rows="2"
+                placeholder="Écrivez votre question… (Entrée pour envoyer, Shift+Entrée pour une nouvelle ligne)"
+              ></textarea>
+            </div>
+            <div class="small-help text-end mt-1">
+              ⏎ Entrée pour envoyer · ⇧+⏎ nouvelle ligne
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aide -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Aide · Analyste PDF</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <div class="markdown-body" id="helpContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS + icônes -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  crossorigin="anonymous"
+></script>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+/>
+
+<!-- Ajout : marked.js pour rendu Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+  // Ajout throttle pour rendu typing (max ~50ms)
+  let pendingRender = false;
+  let lastTypingText = "";
+
+  function scheduleTypingRender() {
+    if (pendingRender) return;
+    pendingRender = true;
+    setTimeout(() => {
+      pendingRender = false;
+      const m = state.messages.find(x => x.typing);
+      if (m) {
+        m.content = lastTypingText;
+        renderMessages();
+      }
+    }, 50);
+  }
+
+  // === SYNCHRO AVEC LE MODE CLAIR / SOMBRE DU MAC ===
+  (function syncThemeWithSystem() {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (e) => {
+      document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+    };
+    apply(mq);
+    if (mq.addEventListener) {
+      mq.addEventListener('change', apply);
+    } else if (mq.addListener) {
+      mq.addListener(apply); // vieux Safari
+    }
+  })();
+
+  // === ÉTAT SIMPLE ===
+  const state = {
+    pdfs: [],       // { localId, id, name, size, pages? }
+    messages: [],   // { role: "user"|"assistant", content, ts }
+    isSending: false,
+    typingMessageId: null,
+  };
+
+  const el = {
+    dropzone: document.getElementById('dropzone'),
+    fileInput: document.getElementById('fileInput'),
+    pdfList: document.getElementById('pdfList'),
+    chatMessages: document.getElementById('chatMessages'),
+    promptInput: document.getElementById('promptInput'),
+    // btnSend removed
+    btnSummary: document.getElementById('btnSummary'),
+    btnHelp: document.getElementById('btnHelp'),
+    btnNewChat: document.getElementById('btnNewChat'),
+    ckUseAllPdfs: document.getElementById('ckUseAllPdfs'),
+    ckReturnSources: document.getElementById('ckReturnSources'),
+  };
+
+  // === UTILITAIRES ===
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderMarkdown(text) {
+    if (!text) return '';
+    try {
+      if (window.marked) {
+        if (typeof marked.parse === 'function') {
+          return marked.parse(text);
+        }
+        if (typeof marked === 'function') {
+          return marked(text);
+        }
+      }
+    } catch (e) {
+      console.error('Erreur rendu markdown', e);
+    }
+    return escapeHtml(text);
+  }
+
+  // -----------------------
+  // Fonctions demandées — placer près des utilitaires
+  // -----------------------
+  function labelForSummaryMode(mode) {
+    switch (mode) {
+      case 'executif': return '🧾 Résumé exécutif';
+      case 'detaille': return '📚 Résumé détaillé';
+      case 'plan': return '🗂️ Plan du document';
+      default: return '🧾 Résumé';
+    }
+  }
+
+  function badgeHtml(text) {
+    return `<span class="content-badge">${escapeHtml(text)}</span>`;
+  }
+
+  // === RENDERING ===
+
+  function renderPdfs() {
+    el.pdfList.innerHTML = '';
+    if (!state.pdfs.length) {
+      const empty = document.createElement('div');
+      empty.className = 'small-help';
+      empty.textContent = 'Aucun document chargé pour le moment.';
+      el.pdfList.appendChild(empty);
+      return;
+    }
+
+    state.pdfs.forEach(pdf => {
+      const pill = document.createElement('div');
+      pill.className = 'pdf-pill d-flex flex-column gap-1';
+
+      // Ligne principale : nom + taille + badge PDF
+      const topRow = document.createElement('div');
+      topRow.className = 'd-flex justify-content-between align-items-center gap-2';
+
+      const left = document.createElement('div');
+      left.innerHTML = `
+        <div class="fw-semibold text-truncate">${pdf.name}</div>
+        <small>
+          ${(pdf.size / (1024 * 1024)).toFixed(2)} Mo
+          ${pdf.pages ? ' · ' + pdf.pages + ' pages' : ''}
+        </small>
+      `;
+
+      const right = document.createElement('div');
+      right.className = 'd-flex align-items-center';
+
+      const badge = document.createElement('span');
+      badge.className = 'badge text-bg-secondary';
+      badge.textContent = 'PDF';
+
+      right.appendChild(badge);
+      topRow.appendChild(left);
+      topRow.appendChild(right);
+
+      // Ligne du bouton "Supprimer" en dessous
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'd-flex justify-content-end mt-2';
+
+      const btnRemove = document.createElement('button');
+      btnRemove.type = 'button';
+      btnRemove.className = 'btn btn-outline-danger btn-sm rounded-pill';
+      btnRemove.textContent = 'Supprimer';
+      btnRemove.dataset.localId = pdf.localId;
+      btnRemove.dataset.role = 'remove-pdf';
+
+      actionsRow.appendChild(btnRemove);
+
+      pill.appendChild(topRow);
+      pill.appendChild(actionsRow);
+      el.pdfList.appendChild(pill);
+    });
+  }
+
+  function renderMessages() {
+    el.chatMessages.innerHTML = '';
+    state.messages.forEach(msg => {
+      const row = document.createElement('div');
+      row.className = 'message-row ' + (msg.role === 'user' ? 'message-user' : 'message-assistant');
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar ' + (msg.role === 'user' ? 'avatar-user' : 'avatar-assistant');
+
+      if (msg.role === 'assistant') {
+        avatar.innerHTML = `
+  <div class="avatar-logo-ring ${msg.typing ? 'working' : ''}">
+    <div class="avatar-logo-wrap">
+      <img src="/static/logo_avatar.png" />
+    </div>
+  </div>
+`;
+      } else {
+        avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble flex-grow-1';
+
+      if (msg.role === 'assistant' && msg.typing) {
+        const contentHtml = renderMarkdown(msg.content || '');
+        bubble.innerHTML = `
+          <div class="message-meta">Assistant</div>
+          <div class="markdown-body">${contentHtml}</div>
+          <div class="typing-indicator mt-1">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+        `;
+      } else {
+        const ts = msg.ts ? new Date(msg.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+        const contentHtml = renderMarkdown(msg.content || '');
+
+        const badge = msg.kind === 'summary'
+          ? badgeHtml(labelForSummaryMode(msg.summaryMode))
+          : '';
+
+        bubble.innerHTML = `
+          <div class="message-meta">
+            ${msg.role === 'user' ? 'Vous' : 'Assistant'} · ${ts}
+            ${badge ? ' · ' + badge : ''}
+          </div>
+          <div class="markdown-body">${contentHtml}</div>
+        `;
+
+        // Bouton COPIER pour les réponses de l'assistant
+        if (msg.role === 'assistant') {
+          const tools = document.createElement('div');
+          tools.className = 'd-flex justify-content-end mt-1';
+
+          const btnCopy = document.createElement('button');
+          btnCopy.type = 'button';
+          btnCopy.className = 'btn btn-sm btn-outline-secondary rounded-pill';
+          btnCopy.textContent = 'Copier';
+
+          btnCopy.onclick = async () => {
+            try {
+              await navigator.clipboard.writeText(msg.content || '');
+              btnCopy.textContent = 'Copié ✔';
+              setTimeout(() => {
+                btnCopy.textContent = 'Copier';
+              }, 1500);
+            } catch (e) {
+              console.error('Erreur copie presse-papiers', e);
+              alert("Impossible de copier dans le presse-papiers.");
+            }
+          };
+
+          tools.appendChild(btnCopy);
+          bubble.appendChild(tools);
+        }
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+
+      el.chatMessages.appendChild(row);
+    });
+
+    el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
+  }
+
+  function addMessage(role, content, extra = {}) {
+    const msg = {
+      id: crypto.randomUUID(),
+      role,
+      content,
+      ts: Date.now(),
+      ...extra
+    };
+    state.messages.push(msg);
+    renderMessages();
+    return msg;
+  }
+
+  function setAssistantTyping(isTyping, label = "Réflexion en cours…") {
+    state.messages = state.messages.filter(m => !m.typing);
+    if (isTyping) {
+      state.messages.push({
+        id: 'typing',
+        role: 'assistant',
+        typing: true,
+        content: label,
+        ts: Date.now()
+      });
+    }
+    renderMessages();
+  }
+
+  // Exporter la conversation au format Markdown
+  function exportConversation() {
+    if (!state.messages.length) {
+      alert("Aucune conversation à exporter pour le moment.");
+      return;
+    }
+
+    const lines = [];
+    state.messages
+      .filter(m => !m.typing)
+      .forEach(m => {
+        const header = m.role === 'user' ? '### Question\n' : '### Réponse\n';
+        lines.push(header + (m.content || '') + '\n');
+      });
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `analyste-pdf-${ts}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // === UPLOAD PDF ===
+
+  function handleFiles(files) {
+    if (!files || !files.length) return;
+
+    [...files].forEach(file => {
+      const entry = {
+        localId: crypto.randomUUID(),
+        id: null,
+        name: file.name,
+        size: file.size,
+        pages: null,
+        uploading: true,
+      };
+      state.pdfs.push(entry);
+      renderPdfs();
+
+      uploadPdf(file)
+        .then(info => {
+          entry.id = info.id;
+          entry.pages = info.pages;
+          entry.uploading = false;
+          renderPdfs();
+        })
+        .catch(err => {
+          console.error('Erreur upload PDF', err);
+          state.pdfs = state.pdfs.filter(p => p.localId !== entry.localId);
+          renderPdfs();
+          alert('Erreur pendant l’upload du document : ' + (err.message || err));
+        });
+    });
+  }
+
+  async function uploadPdf(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/upload_pdf', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const errJson = await res.json();
+        detail = errJson.detail || '';
+      } catch (_) {}
+      throw new Error(detail || ('HTTP ' + res.status));
+    }
+
+    const data = await res.json();
+    return {
+      id: data.id || data.file_id || null,
+      pages: data.pages || data.page_count || null
+    };
+  }
+
+  // === CHAT AVEC LE MODELE ===
+
+  // Résumé : appelle /api/summary
+  async function summarize(mode = "executif") {
+    const pdfIds = state.pdfs.filter(p => p.id).map(p => p.id);
+    if (!pdfIds.length) return alert("Charge au moins un document.");
+
+    addMessage('user', `Fais un résumé (${mode}) des documents sélectionnés.`);
+    el.btnSummary.disabled = true;
+
+    // ✅ animation ON (libellé spécifique)
+    setAssistantTyping(true, "Résumé en cours…");
+
+    try {
+      const res = await fetch('/api/summary', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'mistral-large-3:675b-cloud',
+          pdf_ids: pdfIds,
+          mode,
+          max_chunks: 20
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || ('HTTP ' + res.status));
+      }
+
+      const data = await res.json();
+
+      // ✅ animation OFF (avant d’ajouter la réponse)
+      setAssistantTyping(false);
+
+      addMessage('assistant', data.answer || '(réponse vide)', {
+        kind: 'summary',
+        summaryMode: mode
+      });
+
+    } catch (err) {
+      console.error('Erreur résumé', err);
+      setAssistantTyping(false);
+      addMessage('assistant', "Erreur lors du résumé : " + (err.message || err));
+    } finally {
+      el.btnSummary.disabled = false;
+    }
+  }
+
+  // --- Extrait transformé en fonction réutilisable pour le menu Aide
+  function openHelp() {
+    const helpMd =
+`## Guide rapide
+
+**Charger un document**
+- Glissez-déposez un PDF dans la zone à gauche (ou cliquez).
+
+**Poser des questions**
+- Demandez un résumé, une explication, ou une info précise (dates, montants, clauses…).
+
+**Plusieurs documents**
+- Vous pouvez charger plusieurs fichiers et interroger l’ensemble.
+- Option *Utiliser tous les documents* : inclut tous les PDFs dans la recherche.
+
+**Références**
+- Si *Afficher les références* est activé, l’assistant s’appuie sur des extraits du document.
+
+## Confidentialité (important)
+
+L’application **anonymise automatiquement** certaines données sensibles (noms,email, téléphone, IBAN…) avant l’envoi au modèle.
+Le modèle ne reçoit donc pas ces données en clair.
+La réponse est ensuite restaurée automatiquement côté application.
+
+> Remarque : seuls des **extraits nécessaires** sont envoyés au modèle, pas le fichier brut.`;
+
+    const elHelp = document.getElementById('helpContent');
+    if (elHelp) elHelp.innerHTML = renderMarkdown(helpMd);
+
+    const modalEl = document.getElementById('helpModal');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+
+      // Cleanup guard : si un backdrop refuse de disparaître (double open), on enlève les restes à la fermeture
+      modalEl.addEventListener('hidden.bs.modal', () => {
+        document.body.classList.remove('modal-open');
+        document.querySelectorAll('.modal-backdrop').forEach(n => n.remove());
+      }, { once: true });
+    }
+  }
+
+  // Liaison du bouton Résumé (robuste si l'élément est absent)
+  if (el.btnSummary) {
+    el.btnSummary.addEventListener('click', () => summarize('executif'));
+  }
+  
+  // Le menu "Aide" est déjà lié via btnHelpMenu (voir plus bas)
+  
+  // Raccordement des menus (dropdown / plus)
+  // Dropdown résumé
+  document.querySelectorAll('[data-summary]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      summarize(a.dataset.summary);
+    });
+  });
+  
+  // Menu "Plus"
+  document.getElementById('btnHelpMenu')?.addEventListener('click', () => openHelp());
+  document.getElementById('btnExportMenu')?.addEventListener('click', () => exportConversation());
+  document.getElementById('btnNewChatMenu')?.addEventListener('click', () => {
+    state.messages = [];
+    renderMessages();
+  });
+
+  // === ÉVÉNEMENTS ===
+
+  el.dropzone.addEventListener('click', () => el.fileInput.click());
+  el.fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+  ['dragenter', 'dragover'].forEach(evName => {
+    el.dropzone.addEventListener(evName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.dropzone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(evName => {
+    el.dropzone.addEventListener(evName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.dropzone.classList.remove('dragover');
+    });
+  });
+
+  el.dropzone.addEventListener('drop', e => {
+    const dt = e.dataTransfer;
+    if (dt && dt.files) {
+      handleFiles(dt.files);
+    }
+  });
+
+  // Event delegation pour le bouton Supprimer
+  el.pdfList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-role="remove-pdf"]');
+    if (!btn) return;
+    const localId = btn.dataset.localId;
+    if (!localId) return;
+    state.pdfs = state.pdfs.filter(p => p.localId !== localId);
+    renderPdfs();
+  });
+
+  // Init
+  renderPdfs();
+  renderMessages();
+
+  // Envoi du prompt depuis la zone de texte
+  async function sendPrompt() {
+    const raw = el.promptInput.value || "";
+    const prompt = raw.trim();
+    if (!prompt) return;
+
+    if (state.isSending) return;
+    state.isSending = true;
+
+    addMessage('user', prompt);
+    el.promptInput.value = "";
+
+    const pdfIds = state.pdfs.filter(p => p.id).map(p => p.id);
+
+    try {
+      // ✅ Chat en streaming (SSE) sans message typing séparé
+      await chatStream(
+        prompt,
+        (el.ckUseAllPdfs && el.ckUseAllPdfs.checked) ? pdfIds : [],
+        (el.ckReturnSources && el.ckReturnSources.checked) ? true : false,
+        state.messages.filter(m => !m.typing).map(m => ({ role: m.role, content: m.content }))
+      );
+    } catch (err) {
+      console.error('Erreur chat', err);
+      addMessage('assistant', "Erreur pendant la requête : " + (err.message || err));
+    } finally {
+      state.isSending = false;
+    }
+  }
+
+  async function chatStream(message, pdf_ids, return_sources = true, history = []) {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'mistral-large-3:675b-cloud',
+        message,
+        pdf_ids,
+        return_sources,
+        history,
+        stream: true
+      })
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || ('HTTP ' + res.status));
+    }
+
+    // ✅ Un seul message assistant qu'on met à jour live
+    const msg = addMessage('assistant', '', { typing: true });
+    const msgId = msg.id;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    let buffer = '';
+    let finished = false;
+
+    function appendChunk(text) {
+      const m = state.messages.find(x => x.id === msgId);
+      if (!m) return;
+      m.content = (m.content || '') + text;
+      renderMessages(); // ✅ rendu immédiat -> streaming visible
+    }
+
+    while (!finished) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const evt of parts) {
+        if (!evt.trim()) continue;
+
+        const lines = evt.split('\n');
+        let eventType = null;
+        const dataLines = [];
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice('event:'.length).trim();
+          } else if (line.startsWith('data:')) {
+            let payload = line.slice('data:'.length);
+            if (payload.startsWith(' ')) payload = payload.slice(1); // enlève UN espace SSE optionnel
+            dataLines.push(payload); // pas de trim()
+          }
+        }
+
+        const data = dataLines.join('\n');
+
+        if (eventType === 'done' || data === '[DONE]') {
+          finished = true;
+          break;
+        }
+
+        if (data) appendChunk(data);
+      }
+    }
+
+    // reste buffer
+    if (buffer) {
+      const lines = buffer.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          let payload = line.slice('data:'.length);
+          if (payload.startsWith(' ')) payload = payload.slice(1); // enlève UN espace SSE optionnel
+          appendChunk(payload); // pas de trim()
+        }
+      }
+    }
+
+    // ✅ Finaliser : enlever typing
+    const m = state.messages.find(x => x.id === msgId);
+    if (m) m.typing = false;
+    renderMessages();
+  }
+
+  el.promptInput.addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+
+    // empêche double envoi pendant un stream
+    if (state.isSending) return;
+
+    await sendPrompt();
+  }
+});
+
+</script>
+
+<img src="/static/logo_avatar.png" class="app-logo-corner" alt="Logo">
+</body>
+</html>
