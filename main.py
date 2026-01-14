@@ -22,7 +22,7 @@ try:
 except Exception:
     Document = None
 
-# Ajout pour OCR
+# OCR
 try:
     from pdf2image import convert_from_bytes
     import pytesseract
@@ -37,7 +37,7 @@ import re
 
 
 # ========= ANONYMISATION =========
-# (gardé, mais non utilisé — tu peux le supprimer plus tard si tu veux)
+# (gardé, mais NON utilisé — tu peux supprimer plus tard si tu veux)
 
 @dataclass
 class AnonContext:
@@ -240,7 +240,6 @@ MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 
 # ========= STOPWORDS =========
-# (inchangé)
 FRENCH_STOPWORDS = {
     "a", "à", "â", "abord", "afin", "ah", "ai", "aie", "aient", "ainsi", "allaient",
     "allo", "allô", "allons", "après", "assez", "attendu", "au", "aucun", "aucune",
@@ -408,7 +407,6 @@ app.add_middleware(
 
 
 # ========= UTILS PDF / RAG =========
-# (inchangé — je conserve ton code tel quel)
 
 def read_pdf_bytes(data: bytes) -> List[str]:
     pages_text: List[str] = []
@@ -628,11 +626,11 @@ def call_mistral_chat(model: str, messages: List[Dict[str, str]]) -> str:
         return str(data)
 
 
-def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optional[AnonContext] = None):
+def stream_mistral_chat(model: str, messages: List[Dict[str, str]]):
     """
     Stream SSE vers le navigateur.
-    - ne strip pas (préserve espaces)
-    - ctx optionnel : si None, aucune désanonymisation
+    IMPORTANT : SSE exige que chaque ligne commence par "data:".
+    Donc si le modèle renvoie des "\n", on doit envoyer plusieurs lignes "data:".
     """
     model_name = model or DEFAULT_MODEL_NAME
 
@@ -655,6 +653,29 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
         "Cache-Control": "no-cache",
     }
 
+    def _yield_sse_data(text: str):
+        """
+        En SSE, chaque ligne doit être préfixée par 'data:'.
+        On conserve exactement les retours à la ligne du modèle.
+        """
+        if text is None:
+            return
+        # normalise les fins de ligne
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+        # splitlines(True) garde les "\n" -> pratique pour conserver les lignes vides
+        for part in text.splitlines(True):
+            # retire uniquement le \n final pour ne pas casser l'event framing
+            if part.endswith("\n"):
+                line = part[:-1]
+                yield f"data: {line}\n"
+                # ligne vide => on envoie "data:" (line == "")
+            else:
+                yield f"data: {part}\n"
+
+        # fin d’event
+        yield "\n"
+
     def generate():
         try:
             resp = requests.post(
@@ -665,14 +686,18 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
                 timeout=120,
             )
         except Exception as e:
-            yield f"event: error\ndata: [ERROR] upstream connection failed: {e}\n\n"
-            yield "event: done\ndata: [DONE]\n\n"
+            yield "event: error\n"
+            yield from _yield_sse_data(f"[ERROR] upstream connection failed: {e}")
+            yield "event: done\n"
+            yield from _yield_sse_data("[DONE]")
             return
 
         if resp.status_code >= 400:
             txt = getattr(resp, "text", "")
-            yield f"event: error\ndata: [ERROR] upstream {resp.status_code}: {txt}\n\n"
-            yield "event: done\ndata: [DONE]\n\n"
+            yield "event: error\n"
+            yield from _yield_sse_data(f"[ERROR] upstream {resp.status_code}: {txt}")
+            yield "event: done\n"
+            yield from _yield_sse_data("[DONE]")
             try:
                 resp.close()
             except Exception:
@@ -688,6 +713,7 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
 
                 line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
 
+                # certains serveurs mettent déjà "data:"
                 if line.startswith("data:"):
                     sse_data = line[len("data:"):]
                     if sse_data.startswith(" "):
@@ -697,7 +723,6 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
                 if line == "[DONE]":
                     break
 
-                # Parse JSON or forward text
                 piece = ""
                 try:
                     obj = json.loads(line)
@@ -705,7 +730,7 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
                     piece = line
                 else:
                     if isinstance(obj, dict):
-                        # OpenAI streaming: choices[0].delta.content
+                        # OpenAI-like streaming
                         choices = obj.get("choices") or []
                         if choices:
                             ch0 = choices[0] or {}
@@ -717,26 +742,23 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
                                     msg = ch0.get("message") or {}
                                     if isinstance(msg, dict):
                                         piece = msg.get("content") or ""
-                        # Ollama style: {"message":{"content":...}}
+
+                        # Ollama-like streaming
                         if not piece:
                             msg2 = obj.get("message")
                             if isinstance(msg2, dict):
                                 piece = msg2.get("content") or ""
+
                         if not piece and "content" in obj:
                             piece = obj.get("content") or ""
                     else:
                         piece = str(obj)
 
                 if piece:
-                    out = piece
-                    if ctx is not None:
-                        try:
-                            out = deanonymize_text(piece, ctx)
-                        except Exception:
-                            out = piece
-                    yield f"data: {out}\n\n"
+                    yield from _yield_sse_data(piece)
 
-            yield "event: done\ndata: [DONE]\n\n"
+            yield "event: done\n"
+            yield from _yield_sse_data("[DONE]")
 
         finally:
             try:
@@ -745,7 +767,6 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optiona
                 pass
 
     return generate
-
 
 # ========= API =========
 
@@ -819,27 +840,38 @@ async def chat(req: ChatRequest):
     chunks = retrieve_relevant_chunks(req.message, req.pdf_ids)
     context_text, sources = build_context_and_sources(chunks)
 
+    system = (
+        "Tu es un assistant d'analyse de documents.\n"
+        "Réponds en FRANÇAIS.\n"
+        "FORMAT OBLIGATOIRE : Markdown.\n"
+        "- Utilise des titres (###)\n"
+        "- Utilise des listes à puces\n"
+        "- Mets en gras les éléments clés\n"
+        "- Si tu cites un extrait, mets-le en blockquote (>)\n"
+        "- Ne réponds pas en un seul paragraphe : aère.\n"
+        "Si l'information n'est pas dans les documents, dis-le clairement.\n"
+    )
+
+    if req.return_sources and context_text.strip():
+        full_prompt = f"""Documents:
+{context_text}
+
+Question: {req.message}
+Réponse (Markdown):"""
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": full_prompt},
+        ]
+    else:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": f"Question: {req.message}\nRéponse (Markdown):"},
+        ]
+
     try:
-        # ✅ Anonymisation désactivée
-        question = req.message
-        context = context_text
-
-        if req.return_sources:
-            full_prompt = f"""
-Vous êtes un assistant intelligent. Répondez à la question en vous basant sur les documents fournis.
-
-Documents:
-{context}
-
-Question: {question}
-Réponse:"""
-            messages = [{"role": "user", "content": full_prompt}]
-        else:
-            messages = [{"role": "user", "content": question}]
-
         if req.stream:
             print(f"[CHAT] starting stream model={model_name} pdf_count={len(req.pdf_ids)}")
-            gen = stream_mistral_chat(model_name, messages, ctx=None)
+            gen = stream_mistral_chat(model_name, messages)
             return StreamingResponse(gen(), media_type="text/event-stream")
 
         print(f"[CHAT] calling sync model={model_name}")
@@ -848,7 +880,7 @@ Réponse:"""
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'appel au modèle: {e}")
 
-    answer = re.sub(r"\n{2,}", "\n", (answer or "")).strip()
+    answer = (answer or "").replace("\r\n", "\n").strip()
     return ChatResponse(answer=answer, sources=sources)
 
 
@@ -875,16 +907,26 @@ async def summary(req: SummaryRequest):
     if len(context_text) > max_chars:
         context_text = context_text[:max_chars]
 
-    # ✅ Anonymisation désactivée
-    prompt = (
-        f"Tu es un assistant. Fais un résumé {req.mode} du texte.\n"
-        f"Règles:\n"
-        f"- Réponds en français.\n"
-        f"- Ne réponds pas vide.\n\n"
-        f"TEXTE:\n{context_text}\n\nRÉSUMÉ:"
+    system = (
+        "Tu es un assistant d'analyse de documents.\n"
+        "Réponds en FRANÇAIS.\n"
+        "FORMAT OBLIGATOIRE : Markdown.\n"
+        "- Utilise des titres (###)\n"
+        "- Utilise des listes à puces\n"
+        "- Mets en gras les éléments clés\n"
+        "- Ne réponds pas en un seul paragraphe : aère.\n"
     )
 
-    messages = [{"role": "user", "content": prompt}]
+    prompt = (
+        f"Fais un résumé **{req.mode}** du texte ci-dessous.\n\n"
+        f"TEXTE:\n{context_text}\n\n"
+        f"RÉSUMÉ (Markdown):"
+    )
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": prompt},
+    ]
     summary_text = call_mistral_chat(model_name, messages) or ""
 
     print(f"[SUMMARY] in={len(context_text)} chars | out={len(summary_text)} chars")
@@ -904,29 +946,5 @@ async def root():
     return {"status": "ok", "message": "API up"}
 
 
-@app.post("/api/chat_stream")
-async def chat_stream(req: ChatRequest):
-    model_name = req.model or DEFAULT_MODEL_NAME
-
-    chunks = retrieve_relevant_chunks(req.message, req.pdf_ids)
-    context_text, _sources = build_context_and_sources(chunks)
-
-    # ✅ Anonymisation désactivée
-    question = req.message
-    context = context_text
-
-    system = "Tu es un assistant. Réponds normalement."
-
-    full_prompt = f"""Documents:
-{context}
-
-Question: {question}
-Réponse:"""
-
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": full_prompt},
-    ]
-
-    gen = stream_mistral_chat(model_name, messages, ctx=None)
-    return StreamingResponse(gen(), media_type="text/event-stream")
+# ✅ SUPPRIMÉ : /api/chat_stream
+# (Tu m'as confirmé que tu veux garder uniquement /api/chat)
