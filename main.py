@@ -37,6 +37,7 @@ import re
 
 
 # ========= ANONYMISATION =========
+# (gardé, mais non utilisé — tu peux le supprimer plus tard si tu veux)
 
 @dataclass
 class AnonContext:
@@ -407,6 +408,7 @@ app.add_middleware(
 
 
 # ========= UTILS PDF / RAG =========
+# (inchangé — je conserve ton code tel quel)
 
 def read_pdf_bytes(data: bytes) -> List[str]:
     pages_text: List[str] = []
@@ -626,11 +628,11 @@ def call_mistral_chat(model: str, messages: List[Dict[str, str]]) -> str:
         return str(data)
 
 
-def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: AnonContext):
+def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: Optional[AnonContext] = None):
     """
     Stream SSE vers le navigateur.
     - ne strip pas (préserve espaces)
-    - ne réutilise pas `payload` pour éviter UnboundLocalError
+    - ctx optionnel : si None, aucune désanonymisation
     """
     model_name = model or DEFAULT_MODEL_NAME
 
@@ -726,10 +728,12 @@ def stream_mistral_chat(model: str, messages: List[Dict[str, str]], ctx: AnonCon
                         piece = str(obj)
 
                 if piece:
-                    try:
-                        out = deanonymize_text(piece, ctx)
-                    except Exception:
-                        out = piece
+                    out = piece
+                    if ctx is not None:
+                        try:
+                            out = deanonymize_text(piece, ctx)
+                        except Exception:
+                            out = piece
                     yield f"data: {out}\n\n"
 
             yield "event: done\ndata: [DONE]\n\n"
@@ -816,31 +820,30 @@ async def chat(req: ChatRequest):
     context_text, sources = build_context_and_sources(chunks)
 
     try:
-        ctx = AnonContext()
-        anon_question, ctx = anonymize_text(req.message, ctx)
-        anon_context, ctx = anonymize_text(context_text, ctx)
+        # ✅ Anonymisation désactivée
+        question = req.message
+        context = context_text
 
         if req.return_sources:
             full_prompt = f"""
 Vous êtes un assistant intelligent. Répondez à la question en vous basant sur les documents fournis.
 
 Documents:
-{anon_context}
+{context}
 
-Question: {anon_question}
+Question: {question}
 Réponse:"""
             messages = [{"role": "user", "content": full_prompt}]
         else:
-            messages = [{"role": "user", "content": anon_question}]
+            messages = [{"role": "user", "content": question}]
 
         if req.stream:
             print(f"[CHAT] starting stream model={model_name} pdf_count={len(req.pdf_ids)}")
-            gen = stream_mistral_chat(model_name, messages, ctx)
+            gen = stream_mistral_chat(model_name, messages, ctx=None)
             return StreamingResponse(gen(), media_type="text/event-stream")
 
         print(f"[CHAT] calling sync model={model_name}")
         answer = call_mistral_chat(model_name, messages)
-        answer = deanonymize_text(answer or "", ctx)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'appel au modèle: {e}")
@@ -872,21 +875,17 @@ async def summary(req: SummaryRequest):
     if len(context_text) > max_chars:
         context_text = context_text[:max_chars]
 
-    ctx = AnonContext()
-    anon_context, ctx = anonymize_text(context_text, ctx)
-
+    # ✅ Anonymisation désactivée
     prompt = (
         f"Tu es un assistant. Fais un résumé {req.mode} du texte.\n"
         f"Règles:\n"
         f"- Réponds en français.\n"
-        f"- Ne réponds pas vide.\n"
-        f"- Ne commente pas les tokens __NAME_1__, etc.\n\n"
-        f"TEXTE:\n{anon_context}\n\nRÉSUMÉ:"
+        f"- Ne réponds pas vide.\n\n"
+        f"TEXTE:\n{context_text}\n\nRÉSUMÉ:"
     )
 
     messages = [{"role": "user", "content": prompt}]
     summary_text = call_mistral_chat(model_name, messages) or ""
-    summary_text = deanonymize_text(summary_text, ctx)
 
     print(f"[SUMMARY] in={len(context_text)} chars | out={len(summary_text)} chars")
     return {"summary": summary_text.strip(), "answer": summary_text.strip()}
@@ -912,21 +911,16 @@ async def chat_stream(req: ChatRequest):
     chunks = retrieve_relevant_chunks(req.message, req.pdf_ids)
     context_text, _sources = build_context_and_sources(chunks)
 
-    ctx = AnonContext()
-    anon_question, ctx = anonymize_text(req.message, ctx)
-    anon_context, ctx = anonymize_text(context_text, ctx)
+    # ✅ Anonymisation désactivée
+    question = req.message
+    context = context_text
 
-    system = (
-        "Tu es un assistant. "
-        "Ne commente jamais les tokens d’anonymisation (ex: __NAME_1__). "
-        "Ne mentionne pas l’anonymisation. "
-        "Réponds normalement."
-    )
+    system = "Tu es un assistant. Réponds normalement."
 
     full_prompt = f"""Documents:
-{anon_context}
+{context}
 
-Question: {anon_question}
+Question: {question}
 Réponse:"""
 
     messages = [
@@ -934,5 +928,5 @@ Réponse:"""
         {"role": "user", "content": full_prompt},
     ]
 
-    gen = stream_mistral_chat(model_name, messages, ctx)
+    gen = stream_mistral_chat(model_name, messages, ctx=None)
     return StreamingResponse(gen(), media_type="text/event-stream")

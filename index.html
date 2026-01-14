@@ -46,16 +46,16 @@
     }
 
     .app-shell {
-      max-width: none;      /* supprime la limite 1320px */
+      max-width: none;
       width: 100%;
-      margin: 0;            /* supprime le padding extérieur */
-      padding: 0.5rem;     /* réduit légèrement la marge interne */
+      margin: 0;
+      padding: 0.5rem;
     }
 
     .glass-card {
-      position: relative;  /* permet au logo en absolute d'être positionné par rapport à la carte */
-      min-height: 100vh;    /* occupe la hauteur totale */
-      border-radius: 0;     /* optionnel: look plein écran */
+      position: relative;
+      min-height: 100vh;
+      border-radius: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       box-shadow: 0 18px 40px rgba(15,23,42,0.12);
@@ -65,7 +65,7 @@
     .sidebar {
       border-right: 1px solid var(--border);
       position: relative;
-      z-index: 2; /* au-dessus du chat pour capter les clics */
+      z-index: 2;
     }
 
     .badge-model {
@@ -139,8 +139,8 @@
     .chat-wrapper {
       position: relative;
       z-index: 1;
-      height: calc(100vh - 3rem); /* ajuste si tu gardes un padding */
-      min-height: 0;              /* important: permet au flex de réduire */
+      height: calc(100vh - 3rem);
+      min-height: 0;
       display: flex;
       flex-direction: column;
     }
@@ -174,95 +174,6 @@
       background: radial-gradient(circle at 30% 20%, #22c55e, #15803d 55%, #020617 100%);
     }
 
-    /* Avatar "atelier" quand le LLM travaille */
-    .llm-working {
-      position: relative;
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      background: rgba(15,23,42,0.98); /* fond très sombre pour bien détacher les éléments */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 0 1px rgba(148,163,184,0.6);
-    }
-
-    /* Enclume (base claire / métal) */
-    .anvil {
-      position: absolute;
-      bottom: 4px;
-      left: 4px;
-      right: 4px;
-      height: 8px;
-      background: #e5e7eb;         /* gris clair → super visible sur fond sombre */
-      border-radius: 3px 3px 2px 2px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.6);
-    }
-
-    /* Marteau (orange pour contraster avec le bleu) */
-    .hammer {
-      position: absolute;
-      top: 4px;
-      left: 6px;
-      width: 18px;
-      height: 5px;
-      background: #f97316;         /* orange vif */
-      border-radius: 3px;
-      transform-origin: left bottom;
-      animation: hammerHit 0.6s infinite ease-in-out;
-    }
-
-    /* Petite poignée du marteau */
-    .hammer::after {
-      content: "";
-      position: absolute;
-      right: -5px;
-      bottom: -4px;
-      width: 4px;
-      height: 10px;
-      border-radius: 2px;
-      background: #f97316;
-    }
-
-    /* Étincelle dorée */
-    .spark {
-      position: absolute;
-      width: 7px;
-      height: 7px;
-      background: #facc15;         /* jaune doré */
-      border-radius: 50%;
-      bottom: 6px;
-      right: 5px;
-      opacity: 0;
-      transform: scale(0.4);
-      box-shadow: 0 0 6px rgba(250,204,21,0.9);
-      animation: sparkFlash 0.6s infinite ease-out;
-    }
-
-    /* Animation du marteau */
-    @keyframes hammerHit {
-      0%   { transform: rotate(-25deg); }
-      40%  { transform: rotate(15deg); }
-      60%  { transform: rotate(-10deg); }
-      100% { transform: rotate(-25deg); }
-    }
-
-    /* Animation de l’étincelle */
-    @keyframes sparkFlash {
-      0%, 70% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
-      80% {
-        opacity: 1;
-        transform: scale(1.2);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(0.5);
-      }
-    }
-
     .message-bubble {
       border-radius: 1rem;
       padding: .55rem .8rem;
@@ -270,7 +181,8 @@
       font-size: .9rem;
       background: rgba(248,250,252,0.95);
       border: 1px solid rgba(148,163,184,0.35);
-      white-space: pre-wrap;
+      /* IMPORTANT: ne pas forcer pre-wrap ici si on rend en HTML markdown */
+      white-space: normal;
     }
 
     [data-bs-theme="dark"] .message-bubble {
@@ -308,29 +220,13 @@
       animation: typingBlink 1s infinite ease-in-out;
     }
 
-    .typing-dot:nth-child(2) {
-      animation-delay: .2s;
-    }
-    .typing-dot:nth-child(3) {
-      animation-delay: .4s;
-    }
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
 
     @keyframes typingBlink {
       0%, 20% { opacity: 0.2; transform: translateY(0); }
       50% { opacity: 1; transform: translateY(-2px); }
       100% { opacity: .2; transform: translateY(0); }
-    }
-
-    .avatar-typing {
-      position: relative;
-    }
-
-    .avatar-typing .spinner-border {
-      width: 16px;
-      height: 16px;
-      position: absolute;
-      inset: 50%;
-      transform: translate(-50%, -50%);
     }
 
     .input-panel {
@@ -360,16 +256,13 @@
       outline: none;
     }
 
-    /* Petit feedback au focus */
-    .prompt-input:focus::placeholder {
-      opacity: 0.4;
-    }
+    .prompt-input:focus::placeholder { opacity: 0.4; }
 
     .app-logo-corner{
       position: absolute;
-      left: 6px;           /* décale légèrement vers l'extérieur pour ne pas chevaucher le titre */
-      top: 12px;           /* logo en haut à gauche */
-      width: 38px;         /* un peu plus petit pour éviter le chevauchement */
+      left: 6px;
+      top: 12px;
+      width: 38px;
       height: 38px;
       border-radius: 999px;
       border: 1px solid var(--border);
@@ -377,13 +270,14 @@
       background: rgba(255,255,255,0.65);
       backdrop-filter: blur(10px);
       z-index: 9999;
+      pointer-events: none;
     }
 
     [data-bs-theme="dark"] .app-logo-corner{
       background: rgba(2,6,23,0.55);
     }
 
-    /* Avatar + spinner */
+    /* Avatar logo */
     .avatar-logo-wrap{
       position: relative;
       width: 46px;
@@ -405,7 +299,6 @@
       display: block;
     }
 
-    /* Spinner autour (sur le ring, PAS sur le wrap) */
     .avatar-logo-ring{
       position: relative;
       width: 42px !important;
@@ -430,6 +323,98 @@
 
     @keyframes ringSpin{
       to { transform: rotate(360deg); }
+    }
+
+    /* ===========================
+       Markdown rendu propre
+       =========================== */
+
+    .markdown-body{
+      line-height: 1.65;
+      font-size: .95rem;
+    }
+
+    .markdown-body p{
+      margin: .45rem 0;
+    }
+
+    .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4{
+      margin: .75rem 0 .45rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .markdown-body h2{ font-size: 1.12rem; }
+    .markdown-body h3{ font-size: 1.04rem; }
+
+    .markdown-body ul, .markdown-body ol{
+      margin: .45rem 0 .6rem 1.2rem;
+    }
+
+    .markdown-body li{
+      margin: .18rem 0;
+    }
+
+    .markdown-body blockquote{
+      margin: .6rem 0;
+      padding: .5rem .75rem;
+      border-left: 3px solid rgba(59,130,246,0.55);
+      background: rgba(59,130,246,0.06);
+      border-radius: .6rem;
+      color: var(--muted);
+    }
+
+    .markdown-body :not(pre) > code{
+      background: rgba(148,163,184,0.18);
+      border: 1px solid var(--border);
+      padding: .12em .35em;
+      border-radius: .4rem;
+      font-size: .92em;
+    }
+
+    .markdown-body pre{
+      background: rgba(2,6,23,0.92);
+      color: rgba(255,255,255,0.94);
+      border: 1px solid var(--border);
+      padding: .75rem .9rem;
+      border-radius: .85rem;
+      overflow: auto;
+      margin: .65rem 0;
+    }
+
+    [data-bs-theme="dark"] .markdown-body pre{
+      background: rgba(2,6,23,0.85);
+    }
+
+    .markdown-body pre code{
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: inherit;
+    }
+
+    .markdown-body table{
+      width: 100%;
+      border-collapse: collapse;
+      margin: .6rem 0;
+      font-size: .92rem;
+    }
+
+    .markdown-body th, .markdown-body td{
+      border: 1px solid var(--border);
+      padding: .4rem .55rem;
+      vertical-align: top;
+    }
+
+    .markdown-body th{
+      background: rgba(148,163,184,0.12);
+      font-weight: 700;
+    }
+
+    .markdown-body a{
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
   </style>
 </head>
@@ -595,10 +580,22 @@
   href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
 />
 
-<!-- Ajout : marked.js pour rendu Markdown -->
+<!-- marked.js pour rendu Markdown -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <script>
+  // ============ MARKDOWN CONFIG (IMPORTANT) ============
+  // -> breaks:true : \n devient <br> (rendu "chat" beaucoup plus lisible)
+  // -> gfm:true : listes/tabl./etc
+  if (window.marked && typeof marked.setOptions === "function") {
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+      headerIds: false,
+      mangle: false
+    });
+  }
+
   // Ajout throttle pour rendu typing (max ~50ms)
   let pendingRender = false;
   let lastTypingText = "";
@@ -644,16 +641,12 @@
     pdfList: document.getElementById('pdfList'),
     chatMessages: document.getElementById('chatMessages'),
     promptInput: document.getElementById('promptInput'),
-    // btnSend removed
     btnSummary: document.getElementById('btnSummary'),
-    btnHelp: document.getElementById('btnHelp'),
-    btnNewChat: document.getElementById('btnNewChat'),
     ckUseAllPdfs: document.getElementById('ckUseAllPdfs'),
     ckReturnSources: document.getElementById('ckReturnSources'),
   };
 
   // === UTILITAIRES ===
-
   function escapeHtml(str) {
     return String(str)
       .replace(/&/g, '&amp;')
@@ -665,12 +658,8 @@
     if (!text) return '';
     try {
       if (window.marked) {
-        if (typeof marked.parse === 'function') {
-          return marked.parse(text);
-        }
-        if (typeof marked === 'function') {
-          return marked(text);
-        }
+        if (typeof marked.parse === 'function') return marked.parse(text);
+        if (typeof marked === 'function') return marked(text);
       }
     } catch (e) {
       console.error('Erreur rendu markdown', e);
@@ -678,9 +667,6 @@
     return escapeHtml(text);
   }
 
-  // -----------------------
-  // Fonctions demandées — placer près des utilitaires
-  // -----------------------
   function labelForSummaryMode(mode) {
     switch (mode) {
       case 'executif': return '🧾 Résumé exécutif';
@@ -695,7 +681,6 @@
   }
 
   // === RENDERING ===
-
   function renderPdfs() {
     el.pdfList.innerHTML = '';
     if (!state.pdfs.length) {
@@ -710,13 +695,12 @@
       const pill = document.createElement('div');
       pill.className = 'pdf-pill d-flex flex-column gap-1';
 
-      // Ligne principale : nom + taille + badge PDF
       const topRow = document.createElement('div');
       topRow.className = 'd-flex justify-content-between align-items-center gap-2';
 
       const left = document.createElement('div');
       left.innerHTML = `
-        <div class="fw-semibold text-truncate">${pdf.name}</div>
+        <div class="fw-semibold text-truncate">${escapeHtml(pdf.name)}</div>
         <small>
           ${(pdf.size / (1024 * 1024)).toFixed(2)} Mo
           ${pdf.pages ? ' · ' + pdf.pages + ' pages' : ''}
@@ -734,7 +718,6 @@
       topRow.appendChild(left);
       topRow.appendChild(right);
 
-      // Ligne du bouton "Supprimer" en dessous
       const actionsRow = document.createElement('div');
       actionsRow.className = 'd-flex justify-content-end mt-2';
 
@@ -764,12 +747,12 @@
 
       if (msg.role === 'assistant') {
         avatar.innerHTML = `
-  <div class="avatar-logo-ring ${msg.typing ? 'working' : ''}">
-    <div class="avatar-logo-wrap">
-      <img src="static/logo_avatar.png" />
-    </div>
-  </div>
-`;
+          <div class="avatar-logo-ring ${msg.typing ? 'working' : ''}">
+            <div class="avatar-logo-wrap">
+              <img src="static/logo_avatar.png" alt="logo" />
+            </div>
+          </div>
+        `;
       } else {
         avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
       }
@@ -777,64 +760,54 @@
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble flex-grow-1';
 
-      if (msg.role === 'assistant' && msg.typing) {
-        const contentHtml = renderMarkdown(msg.content || '');
-        bubble.innerHTML = `
-          <div class="message-meta">Assistant</div>
-          <div class="markdown-body">${contentHtml}</div>
+      const ts = msg.ts ? new Date(msg.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+      const contentHtml = renderMarkdown(msg.content || '');
+
+      const badge = msg.kind === 'summary'
+        ? badgeHtml(labelForSummaryMode(msg.summaryMode))
+        : '';
+
+      bubble.innerHTML = `
+        <div class="message-meta">
+          ${msg.role === 'user' ? 'Vous' : 'Assistant'} · ${ts}
+          ${badge ? ' · ' + badge : ''}
+        </div>
+        <div class="markdown-body">${contentHtml}</div>
+        ${msg.role === 'assistant' && msg.typing ? `
           <div class="typing-indicator mt-1">
             <span class="typing-dot"></span>
             <span class="typing-dot"></span>
             <span class="typing-dot"></span>
-          </div>
-        `;
-      } else {
-        const ts = msg.ts ? new Date(msg.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
-        const contentHtml = renderMarkdown(msg.content || '');
+          </div>` : ``}
+      `;
 
-        const badge = msg.kind === 'summary'
-          ? badgeHtml(labelForSummaryMode(msg.summaryMode))
-          : '';
+      // Bouton COPIER pour les réponses de l'assistant (hors typing)
+      if (msg.role === 'assistant' && !msg.typing) {
+        const tools = document.createElement('div');
+        tools.className = 'd-flex justify-content-end mt-1';
 
-        bubble.innerHTML = `
-          <div class="message-meta">
-            ${msg.role === 'user' ? 'Vous' : 'Assistant'} · ${ts}
-            ${badge ? ' · ' + badge : ''}
-          </div>
-          <div class="markdown-body">${contentHtml}</div>
-        `;
+        const btnCopy = document.createElement('button');
+        btnCopy.type = 'button';
+        btnCopy.className = 'btn btn-sm btn-outline-secondary rounded-pill';
+        btnCopy.textContent = 'Copier';
 
-        // Bouton COPIER pour les réponses de l'assistant
-        if (msg.role === 'assistant') {
-          const tools = document.createElement('div');
-          tools.className = 'd-flex justify-content-end mt-1';
+        btnCopy.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(msg.content || '');
+            btnCopy.textContent = 'Copié ✔';
+            setTimeout(() => btnCopy.textContent = 'Copier', 1500);
+          } catch (e) {
+            console.error('Erreur copie presse-papiers', e);
+            alert("Impossible de copier dans le presse-papiers.");
+          }
+        };
 
-          const btnCopy = document.createElement('button');
-          btnCopy.type = 'button';
-          btnCopy.className = 'btn btn-sm btn-outline-secondary rounded-pill';
-          btnCopy.textContent = 'Copier';
-
-          btnCopy.onclick = async () => {
-            try {
-              await navigator.clipboard.writeText(msg.content || '');
-              btnCopy.textContent = 'Copié ✔';
-              setTimeout(() => {
-                btnCopy.textContent = 'Copier';
-              }, 1500);
-            } catch (e) {
-              console.error('Erreur copie presse-papiers', e);
-              alert("Impossible de copier dans le presse-papiers.");
-            }
-          };
-
-          tools.appendChild(btnCopy);
-          bubble.appendChild(tools);
-        }
+        tools.appendChild(btnCopy);
+        bubble.appendChild(tools);
       }
 
       row.appendChild(avatar);
       row.appendChild(bubble);
-
       el.chatMessages.appendChild(row);
     });
 
@@ -868,7 +841,6 @@
     renderMessages();
   }
 
-  // Exporter la conversation au format Markdown
   function exportConversation() {
     if (!state.messages.length) {
       alert("Aucune conversation à exporter pour le moment.");
@@ -898,7 +870,6 @@
   }
 
   // === UPLOAD PDF ===
-
   function handleFiles(files) {
     if (!files || !files.length) return;
 
@@ -955,9 +926,7 @@
     };
   }
 
-  // === CHAT AVEC LE MODELE ===
-
-  // Résumé : appelle /api/summary
+  // === CHAT ===
   async function summarize(mode = "executif") {
     const pdfIds = state.pdfs.filter(p => p.id).map(p => p.id);
     if (!pdfIds.length) return alert("Charge au moins un document.");
@@ -965,7 +934,6 @@
     addMessage('user', `Fais un résumé (${mode}) des documents sélectionnés.`);
     el.btnSummary.disabled = true;
 
-    // ✅ animation ON (libellé spécifique)
     setAssistantTyping(true, "Résumé en cours…");
 
     try {
@@ -987,7 +955,6 @@
 
       const data = await res.json();
 
-      // ✅ animation OFF (avant d’ajouter la réponse)
       setAssistantTyping(false);
 
       addMessage('assistant', data.answer || '(réponse vide)', {
@@ -1004,7 +971,6 @@
     }
   }
 
-  // --- Extrait transformé en fonction réutilisable pour le menu Aide
   function openHelp() {
     const helpMd =
 `## Guide rapide
@@ -1022,13 +988,7 @@
 **Références**
 - Si *Afficher les références* est activé, l’assistant s’appuie sur des extraits du document.
 
-## Confidentialité (important)
-
-L’application **anonymise automatiquement** certaines données sensibles (noms,email, téléphone, IBAN…) avant l’envoi au modèle.
-Le modèle ne reçoit donc pas ces données en clair.
-La réponse est ensuite restaurée automatiquement côté application.
-
-> Remarque : seuls des **extraits nécessaires** sont envoyés au modèle, pas le fichier brut.`;
+> Astuce : structure tes demandes (titres, puces, contraintes), tu obtiendras des réponses plus nettes.`;
 
     const elHelp = document.getElementById('helpContent');
     if (elHelp) elHelp.innerHTML = renderMarkdown(helpMd);
@@ -1038,7 +998,6 @@ La réponse est ensuite restaurée automatiquement côté application.
       const modal = new bootstrap.Modal(modalEl);
       modal.show();
 
-      // Cleanup guard : si un backdrop refuse de disparaître (double open), on enlève les restes à la fermeture
       modalEl.addEventListener('hidden.bs.modal', () => {
         document.body.classList.remove('modal-open');
         document.querySelectorAll('.modal-backdrop').forEach(n => n.remove());
@@ -1046,23 +1005,15 @@ La réponse est ensuite restaurée automatiquement côté application.
     }
   }
 
-  // Liaison du bouton Résumé (robuste si l'élément est absent)
-  if (el.btnSummary) {
-    el.btnSummary.addEventListener('click', () => summarize('executif'));
-  }
-  
-  // Le menu "Aide" est déjà lié via btnHelpMenu (voir plus bas)
-  
-  // Raccordement des menus (dropdown / plus)
-  // Dropdown résumé
+  if (el.btnSummary) el.btnSummary.addEventListener('click', () => summarize('executif'));
+
   document.querySelectorAll('[data-summary]').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       summarize(a.dataset.summary);
     });
   });
-  
-  // Menu "Plus"
+
   document.getElementById('btnHelpMenu')?.addEventListener('click', () => openHelp());
   document.getElementById('btnExportMenu')?.addEventListener('click', () => exportConversation());
   document.getElementById('btnNewChatMenu')?.addEventListener('click', () => {
@@ -1070,8 +1021,7 @@ La réponse est ensuite restaurée automatiquement côté application.
     renderMessages();
   });
 
-  // === ÉVÉNEMENTS ===
-
+  // === ÉVÉNEMENTS UPLOAD ===
   el.dropzone.addEventListener('click', () => el.fileInput.click());
   el.fileInput.addEventListener('change', e => handleFiles(e.target.files));
 
@@ -1093,12 +1043,9 @@ La réponse est ensuite restaurée automatiquement côté application.
 
   el.dropzone.addEventListener('drop', e => {
     const dt = e.dataTransfer;
-    if (dt && dt.files) {
-      handleFiles(dt.files);
-    }
+    if (dt && dt.files) handleFiles(dt.files);
   });
 
-  // Event delegation pour le bouton Supprimer
   el.pdfList.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-role="remove-pdf"]');
     if (!btn) return;
@@ -1108,16 +1055,13 @@ La réponse est ensuite restaurée automatiquement côté application.
     renderPdfs();
   });
 
-  // Init
   renderPdfs();
   renderMessages();
 
-  // Envoi du prompt depuis la zone de texte
   async function sendPrompt() {
     const raw = el.promptInput.value || "";
     const prompt = raw.trim();
     if (!prompt) return;
-
     if (state.isSending) return;
     state.isSending = true;
 
@@ -1127,7 +1071,6 @@ La réponse est ensuite restaurée automatiquement côté application.
     const pdfIds = state.pdfs.filter(p => p.id).map(p => p.id);
 
     try {
-      // ✅ Chat en streaming (SSE) sans message typing séparé
       await chatStream(
         prompt,
         (el.ckUseAllPdfs && el.ckUseAllPdfs.checked) ? pdfIds : [],
@@ -1174,8 +1117,12 @@ La réponse est ensuite restaurée automatiquement côté application.
     function appendChunk(text) {
       const m = state.messages.find(x => x.id === msgId);
       if (!m) return;
-      m.content = (m.content || '') + text;
-      renderMessages(); // ✅ rendu immédiat -> streaming visible
+      const next = (m.content || '') + text;
+
+      // ✅ throttle render
+      m.content = next;
+      lastTypingText = next;
+      scheduleTypingRender();
     }
 
     while (!finished) {
@@ -1199,8 +1146,8 @@ La réponse est ensuite restaurée automatiquement côté application.
             eventType = line.slice('event:'.length).trim();
           } else if (line.startsWith('data:')) {
             let payload = line.slice('data:'.length);
-            if (payload.startsWith(' ')) payload = payload.slice(1); // enlève UN espace SSE optionnel
-            dataLines.push(payload); // pas de trim()
+            if (payload.startsWith(' ')) payload = payload.slice(1);
+            dataLines.push(payload);
           }
         }
 
@@ -1221,29 +1168,29 @@ La réponse est ensuite restaurée automatiquement côté application.
       for (const line of lines) {
         if (line.startsWith('data:')) {
           let payload = line.slice('data:'.length);
-          if (payload.startsWith(' ')) payload = payload.slice(1); // enlève UN espace SSE optionnel
-          appendChunk(payload); // pas de trim()
+          if (payload.startsWith(' ')) payload = payload.slice(1);
+          appendChunk(payload);
         }
       }
     }
 
-    // ✅ Finaliser : enlever typing
+    // ✅ Finaliser : enlever typing + render final propre
     const m = state.messages.find(x => x.id === msgId);
-    if (m) m.typing = false;
+    if (m) {
+      m.typing = false;
+      // met à jour le dernier texte (si un render est en attente)
+      lastTypingText = m.content || lastTypingText;
+    }
     renderMessages();
   }
 
   el.promptInput.addEventListener('keydown', async (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-
-    // empêche double envoi pendant un stream
-    if (state.isSending) return;
-
-    await sendPrompt();
-  }
-});
-
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (state.isSending) return;
+      await sendPrompt();
+    }
+  });
 </script>
 
 <img src="static/logo_avatar.png" class="app-logo-corner" alt="Logo">
